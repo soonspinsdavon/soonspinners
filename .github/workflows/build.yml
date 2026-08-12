@@ -1,0 +1,81 @@
+name: Build SoonSpinner
+
+# Builds the plugin on both macOS and Windows without you needing to own
+# either machine yourself. Runs on every push/PR so you catch breakage
+# early; push a tag like "v0.1.0-beta1" to also cut a GitHub Release with
+# both platforms' zips attached, ready to hand to testers.
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Caches JUCE (cloned via CMake FetchContent) between runs so CI
+      # doesn't re-download/rebuild the whole framework every time.
+      - name: Cache JUCE FetchContent
+        uses: actions/cache@v4
+        with:
+          path: build/_deps
+          key: ${{ runner.os }}-juce-${{ hashFiles('CMakeLists.txt') }}
+
+      - name: Configure (macOS)
+        if: runner.os == 'macOS'
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Configure (Windows)
+        if: runner.os == 'Windows'
+        run: cmake -B build -A x64
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - name: Package (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          mkdir -p dist
+          cp -R "build/SoonSpinner_artefacts/Release/VST3/SoonSpinner.vst3" dist/
+          cp -R "build/SoonSpinner_artefacts/Release/AU/SoonSpinner.component" dist/
+          cd dist && zip -r "../SoonSpinner-macOS.zip" .
+
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Copy-Item -Recurse "build/SoonSpinner_artefacts/Release/VST3/SoonSpinner.vst3" dist/
+          Compress-Archive -Path dist/* -DestinationPath "SoonSpinner-Windows.zip"
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SoonSpinner-${{ runner.os }}
+          path: SoonSpinner-*.zip
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all platform zips
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**/*.zip
+          generate_release_notes: true
