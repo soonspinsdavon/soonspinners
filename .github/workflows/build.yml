@@ -68,6 +68,8 @@ jobs:
     needs: build
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # needed to create the GitHub Release and attach files
     steps:
       - name: Download all platform zips
         uses: actions/download-artifact@v4
