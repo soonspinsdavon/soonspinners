@@ -62,7 +62,7 @@ SoonSpinnerAudioProcessorEditor::SoonSpinnerAudioProcessorEditor (SoonSpinnerAud
     configureKnob (mixKnob, mixLabel, "mix");
     configureKnob (wobbleKnob, wobbleLabel, "wobble");
 
-    for (auto* button : { &spinDownButton, &spinUpButton })
+    for (auto* button : { &spinDownButton, &halfTimeButton, &spinUpButton })
     {
         button->setClickingTogglesState (true);
         addAndMakeVisible (button);
@@ -77,6 +77,7 @@ SoonSpinnerAudioProcessorEditor::SoonSpinnerAudioProcessorEditor (SoonSpinnerAud
 
     spinDownAttachment = std::make_unique<ButtonAttachment> (processorRef.apvts, ParamIDs::spinDownBtn, spinDownButton);
     spinUpAttachment   = std::make_unique<ButtonAttachment> (processorRef.apvts, ParamIDs::spinUpBtn, spinUpButton);
+    halfTimeAttachment = std::make_unique<ButtonAttachment> (processorRef.apvts, ParamIDs::halfTimeBtn, halfTimeButton);
 
     setResizable (false, false);
     setSize (560, 360);
@@ -192,6 +193,8 @@ void SoonSpinnerAudioProcessorEditor::resized()
     area.removeFromTop (24); // room for knob labels above buttons
 
     auto buttonRow = area.removeFromTop (60);
-    spinDownButton.setBounds (buttonRow.removeFromLeft (buttonRow.getWidth() / 2).reduced (12, 4));
-    spinUpButton.setBounds (buttonRow.reduced (12, 4));
+    const int buttonWidth = buttonRow.getWidth() / 3;
+    spinDownButton.setBounds (buttonRow.removeFromLeft (buttonWidth).reduced (8, 4));
+    halfTimeButton.setBounds (buttonRow.removeFromLeft (buttonWidth).reduced (8, 4));
+    spinUpButton.setBounds (buttonRow.reduced (8, 4));
 }

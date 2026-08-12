@@ -25,6 +25,7 @@ void VariSpinEngine::reset()
     readPos  = (double) (bufferLength / 2);
     wowPhase = 0.0;
     flutterPhase = 0.0;
+    halfTimeWasEngaged = false;
 }
 
 void VariSpinEngine::setGlideTimeMs (float ms)
@@ -45,11 +46,22 @@ void VariSpinEngine::setSpinUp (bool isHeld, float targetRatio) noexcept
     spinUpRatio = targetRatio;
 }
 
+void VariSpinEngine::updateTempoSync (double bpmIn, double hostPpqPosition, bool hostProvidesPosition, double cycleLengthBeatsIn) noexcept
+{
+    bpm = bpmIn > 0.0 ? bpmIn : 120.0;
+    cycleLengthBeats = cycleLengthBeatsIn > 0.0 ? cycleLengthBeatsIn : 4.0;
+    hostSyncValid = hostProvidesPosition;
+
+    if (hostSyncValid)
+        currentPpq = hostPpqPosition;
+}
+
 float VariSpinEngine::computeTargetRatio() const noexcept
 {
     // Spin buttons override the manual speed knob while held, and it
     // glides back to the manual speed the moment they're released -
-    // same interaction model as Vari-Fi's momentary spin.
+    // same interaction model as Vari-Fi's momentary spin. (Half Time has
+    // its own handling in process() - see there for why.)
     if (spinDownHeld) return spinDownRatio;
     if (spinUpHeld)   return spinUpRatio;
     return baseSpeed;
@@ -64,7 +76,40 @@ void VariSpinEngine::process (juce::AudioBuffer<float>& buffer)
     const int numSamples    = buffer.getNumSamples();
     const int delayChannels = delayBuffer.getNumChannels();
 
-    smoothedRatio.setTargetValue (computeTargetRatio());
+    if (halfTimeEnabled)
+    {
+        // Hard, decisive cut to half speed - no eased glide. That instant
+        // drop is core to the character, not something to smooth away.
+        smoothedRatio.setCurrentAndTargetValue (halfTimeSlowRatio);
+
+        const auto cycleIndex = (long long) std::floor (currentPpq / cycleLengthBeats);
+
+        if (! halfTimeWasEngaged)
+        {
+            // Just switched on this block - start dragging from wherever
+            // we are right now rather than snapping immediately. The
+            // first hard reset happens naturally at the next bar line.
+            halfTimeLastCycleIndex = cycleIndex;
+            halfTimeWasEngaged = true;
+        }
+        else if (cycleIndex != halfTimeLastCycleIndex)
+        {
+            // Crossed into a new cycle - hard snap the read head back to
+            // "now" instead of gliding back. This instant jump is the
+            // actual half-time effect (matches Gross Beat's 1/2 Speed
+            // preset, which does the same hard reset at the loop point).
+            readPos = (double) writePos - (double) halfTimeResetLatencySamples;
+            if (readPos < 0.0)
+                readPos += bufferLength;
+
+            halfTimeLastCycleIndex = cycleIndex;
+        }
+    }
+    else
+    {
+        smoothedRatio.setTargetValue (computeTargetRatio());
+        halfTimeWasEngaged = false;
+    }
 
     const double wowIncrement     = juce::MathConstants<double>::twoPi * wowRateHz / sampleRate;
     const double flutterIncrement = juce::MathConstants<double>::twoPi * flutterRateHz / sampleRate;
@@ -131,4 +176,9 @@ void VariSpinEngine::process (juce::AudioBuffer<float>& buffer)
                 readPos += bufferLength;
         }
     }
+
+    // Free-run the beat clock for Half Time when the host isn't reporting
+    // a playhead position (e.g. some standalone setups).
+    if (! hostSyncValid)
+        currentPpq += ((double) numSamples / sampleRate) * (bpm / 60.0);
 }

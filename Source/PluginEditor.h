@@ -49,6 +49,7 @@ private:
     juce::Label  speedLabel, glideLabel, spinDownAmtLabel, spinUpAmtLabel, mixLabel, wobbleLabel;
 
     juce::TextButton spinDownButton { "spin down" };
+    juce::TextButton halfTimeButton { "half time" };
     juce::TextButton spinUpButton   { "spin up" };
 
     using SliderAttachment = juce::AudioProcessorValueTreeState::SliderAttachment;
@@ -56,7 +57,7 @@ private:
 
     std::unique_ptr<SliderAttachment> speedAttachment, glideAttachment, spinDownAmtAttachment,
                                        spinUpAmtAttachment, mixAttachment, wobbleAttachment;
-    std::unique_ptr<ButtonAttachment> spinDownAttachment, spinUpAttachment;
+    std::unique_ptr<ButtonAttachment> spinDownAttachment, spinUpAttachment, halfTimeAttachment;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SoonSpinnerAudioProcessorEditor)
 };

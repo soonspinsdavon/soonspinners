@@ -53,6 +53,9 @@ juce::AudioProcessorValueTreeState::ParameterLayout SoonSpinnerAudioProcessor::c
     params.push_back (std::make_unique<AudioParameterBool> (
         ParameterID { ParamIDs::spinUpBtn, 1 }, "Spin Up", false));
 
+    params.push_back (std::make_unique<AudioParameterBool> (
+        ParameterID { ParamIDs::halfTimeBtn, 1 }, "Half Time", false));
+
     return { params.begin(), params.end() };
 }
 
@@ -86,6 +89,37 @@ void SoonSpinnerAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
 
     engine.setSpinDown (downHeld, apvts.getRawParameterValue (ParamIDs::spinDownAmt)->load());
     engine.setSpinUp   (upHeld,   apvts.getRawParameterValue (ParamIDs::spinUpAmt)->load());
+
+    const bool halfTimeOn = apvts.getRawParameterValue (ParamIDs::halfTimeBtn)->load() > 0.5f;
+    engine.setHalfTimeEnabled (halfTimeOn);
+
+    // Pull tempo/beat position from the host so Half Time can lock to the
+    // beat grid. Falls back to a free-running 120bpm clock (handled inside
+    // the engine) if the host doesn't report a playhead position.
+    double bpm = 120.0;
+    double ppq = 0.0;
+    double cycleLengthBeats = 4.0; // one bar in 4/4, refined below if the host reports otherwise
+    bool hostProvidesPosition = false;
+
+    if (auto* playHead = getPlayHead())
+    {
+        if (auto position = playHead->getPosition())
+        {
+            if (auto bpmOpt = position->getBpm())
+                bpm = *bpmOpt;
+
+            if (auto ppqOpt = position->getPpqPosition())
+            {
+                ppq = *ppqOpt;
+                hostProvidesPosition = true;
+            }
+
+            if (auto timeSig = position->getTimeSignature())
+                cycleLengthBeats = timeSig->numerator * (4.0 / (double) timeSig->denominator);
+        }
+    }
+
+    engine.updateTempoSync (bpm, ppq, hostProvidesPosition, cycleLengthBeats);
 
     engine.process (buffer);
 }

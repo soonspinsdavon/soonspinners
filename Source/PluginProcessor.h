@@ -13,6 +13,7 @@ namespace ParamIDs
     constexpr auto wobble      = "wobble";
     constexpr auto spinDownBtn = "spinDownBtn";
     constexpr auto spinUpBtn   = "spinUpBtn";
+    constexpr auto halfTimeBtn = "halfTimeBtn";
 }
 
 class SoonSpinnerAudioProcessor : public juce::AudioProcessor

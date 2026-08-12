@@ -4,8 +4,11 @@ A variable "spin" effect plugin for Soonspins
 
 This is the MVP core: manual speed control with motor-style glide, two
 momentary "Spin Down" / "Spin Up" buttons (also exposed as
-DAW/MIDI-automatable parameters), and a Wow/Flutter macro for tape-style
-wobble. 
+DAW/MIDI-automatable parameters), a Wow/Flutter macro for tape-style
+wobble, and a tempo-synced "Half Time" toggle that matches Gross Beat's
+actual "1/2 Speed" preset: constant half speed for the whole bar, then
+a hard, instant snap back to "now" at the next bar line rather than a
+smooth catch-up. The snap is the effect, not a bug. 
 
 ## What's in here
 
@@ -86,6 +89,23 @@ Amount knobs while held, and glide back to the base speed on release.
 See the comment block at the top of `VariSpinEngine.h` for the known
 MVP limitation (a rare glitch under sustained extreme pitch shifts) and
 the plan to fix it with a crossfaded dual-read-head.
+
+Half Time reads the host's BPM/beat position/time signature (falling
+back to a free-running 120bpm clock if the host doesn't report one,
+e.g. some standalone setups) and takes priority over the Speed/Spin
+controls while engaged. When you engage it, it starts dragging at half
+speed immediately from wherever playback currently is - it doesn't
+snap right away. The first hard reset happens naturally at the next
+bar line, and it repeats every bar for as long as it's on. Turning it
+off glides smoothly back to the manual Speed/Spin controls rather than
+cutting hard.
+
+This is deliberately just the one toggle for now, matching Gross
+Beat's single "1/2 Speed" preset rather than its full drawable curve
+editor. A proper per-beat curve editor (their "time" lane in general,
+plus separate volume/gate curves) is a bigger feature we're treating
+as its own future plugin rather than bolting onto SoonSpinner - see
+the product notes we talked through for why.
 
 The Wow/Flutter knob is a single macro (0-100%) that scales a fixed
 ~0.8Hz "wow" LFO and a fixed ~6Hz "flutter" LFO together, both

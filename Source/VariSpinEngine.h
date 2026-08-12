@@ -60,6 +60,22 @@ public:
         is a natural follow-up once this sounds right. */
     void setWobbleAmount (float amount) noexcept { wobbleAmount = juce::jlimit (0.0f, 1.0f, amount); }
 
+    /** Tempo-synced "half time" macro - matches Gross Beat's actual "1/2
+        Speed" preset: constant half speed for the whole cycle (one bar by
+        default), then a hard, instant snap back to "now" at the next bar
+        line rather than a smooth catch-up ramp. That hard snap is the
+        effect, not a glitch to hide - it's what gives it the glitchy,
+        decisive drop character instead of sounding like an awkward sped-up
+        passage. Overrides the manual Speed/Spin controls while enabled. */
+    void setHalfTimeEnabled (bool enabled) noexcept { halfTimeEnabled = enabled; }
+
+    /** Call once per block, before process(), with the host's current
+        tempo/position. If the host doesn't report a playhead position,
+        pass hostProvidesPosition = false and the engine free-runs its own
+        beat clock from bpmIn so Half Time still works, just not locked to
+        the host transport (useful for the Standalone target). */
+    void updateTempoSync (double bpmIn, double hostPpqPosition, bool hostProvidesPosition, double cycleLengthBeatsIn) noexcept;
+
     void process (juce::AudioBuffer<float>& buffer);
 
 private:
@@ -85,6 +101,18 @@ private:
     static constexpr float flutterMaxDepth = 0.008f; // +-0.8% speed at full wobble
     double wowPhase = 0.0;
     double flutterPhase = 0.0;
+
+    // Half time / tempo sync state
+    bool halfTimeEnabled = false;
+    double bpm = 120.0;
+    double currentPpq = 0.0;        // in beats; from the host, or free-running as a fallback
+    bool hostSyncValid = false;
+    double cycleLengthBeats = 4.0;  // one bar; updated from the host's time signature when available
+
+    static constexpr float halfTimeSlowRatio = 0.5f;
+    static constexpr int   halfTimeResetLatencySamples = 512; // ~10ms at 48kHz - close enough to "now" after the snap
+    bool halfTimeWasEngaged = false;
+    long long halfTimeLastCycleIndex = 0;
 
     juce::AudioBuffer<float> delayBuffer;
     int writePos      = 0;
