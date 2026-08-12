@@ -1,20 +1,11 @@
 # SoonSpinner
 
-A variable-rate "spin" effect plugin for Soonspins — same core idea as
-Soundtoys' Vari-Fi (turntable/tape-style speed changes that couple pitch
-and time), built from scratch with JUCE so it runs as VST3 / AU on both
-macOS and Windows, plus a Standalone app for quick testing.
+A variable "spin" effect plugin for Soonspins
 
 This is the MVP core: manual speed control with motor-style glide, two
 momentary "Spin Down" / "Spin Up" buttons (also exposed as
 DAW/MIDI-automatable parameters), and a Wow/Flutter macro for tape-style
-wobble. GUI has a lowercase-styled title and a generated parallax cloud
-background in the soonspins orange that continuously drifts left to
-right (like soonspins.com), with three layers scrolling/parallaxing at
-different speeds for depth. No real branding artwork/logo, no
-AAX/Pro Tools support yet, and the exact soonspins.com font isn't
-confirmed — those are deliberately deferred (see Roadmap and Open
-questions below).
+wobble. 
 
 ## What's in here
 
